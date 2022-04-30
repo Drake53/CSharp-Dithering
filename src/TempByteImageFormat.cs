@@ -15,36 +15,12 @@ public sealed class TempByteImageFormat : IImageFormat<byte>
 	/// </summary>
 	public readonly int height;
 
-	private readonly byte[,,] content3d;
-
-	private readonly byte[] content1d;
+	private readonly byte[] content;
 
 	/// <summary>
 	/// How many color channels per pixel
 	/// </summary>
 	public readonly int channelsPerPixel;
-
-	/// <summary>
-	/// Constructor for temp byte image format
-	/// </summary>
-	/// <param name="input">Input bitmap as three dimensional (widht, height, channels per pixel) byte array</param>
-	/// <param name="createCopy">True if you want to create copy of data</param>
-	public TempByteImageFormat(byte[,,] input, bool createCopy = false)
-	{
-		if (createCopy)
-		{
-			this.content3d = (byte[,,])input.Clone();
-		}
-		else
-		{
-			this.content3d = input;
-		}
-		
-		this.content1d = null;
-		this.width = input.GetLength(0);
-		this.height = input.GetLength(1);
-		this.channelsPerPixel = input.GetLength(2);
-	}
 
 	/// <summary>
 	/// Constructor for temp byte image format
@@ -56,15 +32,14 @@ public sealed class TempByteImageFormat : IImageFormat<byte>
 	/// <param name="createCopy">True if you want to create copy of data</param>
 	public TempByteImageFormat(byte[] input, int imageWidth, int imageHeight, int imageChannelsPerPixel, bool createCopy = false)
 	{
-		this.content3d = null;
 		if (createCopy)
 		{
-			this.content1d = new byte[input.Length];
-			Buffer.BlockCopy(input, 0, this.content1d, 0, input.Length);
+			this.content = new byte[input.Length];
+			Buffer.BlockCopy(input, 0, this.content, 0, input.Length);
 		}
 		else
 		{
-			this.content1d = input;
+			this.content = input;
 		}
 		this.width = imageWidth;
 		this.height = imageHeight;
@@ -77,17 +52,7 @@ public sealed class TempByteImageFormat : IImageFormat<byte>
 	/// <param name="input">Existing TempByteImageFormat</param>
 	public TempByteImageFormat(TempByteImageFormat input)
 	{
-		if (input.content1d != null)
-		{
-			this.content1d = input.content1d;
-			this.content3d = null;
-		}
-		else
-		{
-			this.content3d = input.content3d;
-			this.content1d = null;
-		}
-
+		this.content = input.content;
 		this.width = input.width;
 		this.height = input.height;
 		this.channelsPerPixel = input.channelsPerPixel;
@@ -124,31 +89,7 @@ public sealed class TempByteImageFormat : IImageFormat<byte>
 	/// Get raw content as byte array
 	/// </summary>
 	/// <returns>Byte array</returns>
-	public byte[] GetRawContent()
-	{
-		if (this.content1d != null)
-		{
-			return this.content1d;
-		}
-		else
-		{
-			byte[] returnArray = new byte[this.width * this.height * this.channelsPerPixel];
-			int currentIndex = 0;
-			for (int y = 0; y < this.height; y++)
-			{
-				for (int x = 0; x < this.width; x++)
-				{
-					for (int i = 0; i < this.channelsPerPixel; i++)
-					{
-						returnArray[currentIndex] = this.content3d[x, y, i];
-						currentIndex++;
-					}
-				}
-			}
-
-			return returnArray;
-		}
-	}
+	public byte[] GetRawContent() => this.content;
 
 	/// <summary>
 	/// Set pixel channels of certain coordinate
@@ -158,20 +99,10 @@ public sealed class TempByteImageFormat : IImageFormat<byte>
 	/// <param name="newValues">New values as object array</param>
 	public void SetPixelChannels(int x, int y, byte[] newValues)
 	{
-		if (this.content1d != null)
+		int indexBase = y * this.width * this.channelsPerPixel + x * this.channelsPerPixel;
+		for (int i = 0; i < this.channelsPerPixel; i++)
 		{
-			int indexBase = y * this.width * this.channelsPerPixel + x * this.channelsPerPixel;
-			for (int i = 0; i < this.channelsPerPixel; i++)
-			{
-				this.content1d[indexBase + i] = newValues[i];
-			}
-		}
-		else
-		{
-			for (int i = 0; i < this.channelsPerPixel; i++)
-			{
-				this.content3d[x, y, i] = newValues[i];
-			}
+			this.content[indexBase + i] = newValues[i];
 		}
 	}
 
@@ -184,21 +115,11 @@ public sealed class TempByteImageFormat : IImageFormat<byte>
 	public byte[] GetPixelChannels(int x, int y)
 	{
 		byte[] returnArray = new byte[this.channelsPerPixel];
-
-		if (this.content1d != null)
+		
+		int indexBase = y * this.width * this.channelsPerPixel + x * this.channelsPerPixel;
+		for (int i = 0; i < this.channelsPerPixel; i++)
 		{
-			int indexBase = y * this.width * this.channelsPerPixel + x * this.channelsPerPixel;
-			for (int i = 0; i < this.channelsPerPixel; i++)
-			{
-				returnArray[i] = this.content1d[indexBase + i];
-			}
-		}
-		else
-		{
-			for (int i = 0; i < this.channelsPerPixel; i++)
-			{
-				returnArray[i] = this.content3d[x, y, i];
-			}
+			returnArray[i] = this.content[indexBase + i];
 		}
 
 		return returnArray;
@@ -212,20 +133,10 @@ public sealed class TempByteImageFormat : IImageFormat<byte>
 	/// <param name="pixelStorage">Array where pixel channels values will be written</param>
 	public void GetPixelChannels(int x, int y, ref byte[] pixelStorage)
 	{
-		if (this.content1d != null)
+		int indexBase = y * this.width * this.channelsPerPixel + x * this.channelsPerPixel;
+		for (int i = 0; i < this.channelsPerPixel; i++)
 		{
-			int indexBase = y * this.width * this.channelsPerPixel + x * this.channelsPerPixel;
-			for (int i = 0; i < this.channelsPerPixel; i++)
-			{
-				pixelStorage[i] = this.content1d[indexBase + i];
-			}
-		}
-		else
-		{
-			for (int i = 0; i < this.channelsPerPixel; i++)
-			{
-				pixelStorage[i] = this.content3d[x, y, i];
-			}
+			pixelStorage[i] = this.content[indexBase + i];
 		}
 	}
 
